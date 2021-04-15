@@ -21,13 +21,17 @@ def setup(args):
 
 def main(args):
     cfg = setup(args)
-
+    from thop import profile   
     model = Trainer.build_model(cfg)
     model.eval().cuda()
-    input_size = (3, 512, 512)
+
+    input_size = (3, 288, 800)
     image = torch.zeros(*input_size)
     batched_input = {"image": image}
     ops, params = measure_model(model, [batched_input])
+    ops = measure_model(model, [batched_input])[1]
+    params = measure_model(model, [batched_input])[2]
+  
     print('ops: {:.2f}G\tparams: {:.2f}M'.format(ops / 2**30, params / 2**20))
 
 

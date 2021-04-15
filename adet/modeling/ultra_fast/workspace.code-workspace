@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../../anaconda3/envs/ade2/lib/python3.7/site-packages/detectron2"
+		}
+	],
+	"settings": {}
+}

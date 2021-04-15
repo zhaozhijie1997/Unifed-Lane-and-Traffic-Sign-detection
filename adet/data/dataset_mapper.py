@@ -7,17 +7,19 @@ import torch
 from fvcore.common.file_io import PathManager
 from PIL import Image
 from pycocotools import mask as maskUtils
+import torchvision.transforms as transf
 
 from detectron2.data import detection_utils as utils
 from detectron2.data import transforms as T
 from detectron2.data.dataset_mapper import DatasetMapper
 from detectron2.data.detection_utils import SizeMismatchError
 from detectron2.structures import BoxMode
-
+from adet.data.datasets.lane_dataset import LaneClsDataset
+import adet.data.datasets.lane_transform as myTransform
 from .augmentation import RandomCropWithInstance
 from .detection_utils import (annotations_to_instances, build_augmentation,
                               transform_instance_annotations)
-
+from .datasets.constant import culane_row_anchor
 """
 This file contains the default mapping that's applied to "dataset dicts".
 """
@@ -62,6 +64,7 @@ class DatasetMapperWithBasis(DatasetMapper):
             "Rebuilding the augmentations. The previous augmentations will be overridden."
         )
         self.augmentation = build_augmentation(cfg, is_train)
+  
 
         if cfg.INPUT.CROP.ENABLED and is_train:
             self.augmentation.insert(
@@ -91,6 +94,9 @@ class DatasetMapperWithBasis(DatasetMapper):
         """
         dataset_dict = copy.deepcopy(dataset_dict)  # it will be modified by code below
         # USER: Write your own image loading if it's not from a file
+
+        category = dataset_dict["annotations"][0]['category_id']
+
         try:
             image = utils.read_image(
                 dataset_dict["file_name"], format=self.image_format
@@ -110,6 +116,9 @@ class DatasetMapperWithBasis(DatasetMapper):
             else:
                 raise e
 
+ 
+
+
         # USER: Remove if you don't do semantic/panoptic segmentation.
         if "sem_seg_file_name" in dataset_dict:
             sem_seg_gt = utils.read_image(
@@ -118,17 +127,26 @@ class DatasetMapperWithBasis(DatasetMapper):
         else:
             sem_seg_gt = None
 
-        boxes = np.asarray(
-            [
-                BoxMode.convert(
-                    instance["bbox"], instance["bbox_mode"], BoxMode.XYXY_ABS
-                )
-                for instance in dataset_dict["annotations"]
-            ]
-        )
-        aug_input = T.StandardAugInput(image, boxes=boxes, sem_seg=sem_seg_gt)
-        transforms = aug_input.apply_augmentations(self.augmentation)
-        image, sem_seg_gt = aug_input.image, aug_input.sem_seg
+        
+        if(int(category) != 5):
+            boxes = np.asarray(
+                [
+                    BoxMode.convert(
+                        instance["bbox"], instance["bbox_mode"], BoxMode.XYXY_ABS
+                    )
+                    for instance in dataset_dict["annotations"]
+                ]
+            )
+            aug_input = T.StandardAugInput(image, boxes=boxes, sem_seg=sem_seg_gt)
+            transforms = aug_input.apply_augmentations(self.augmentation)
+            image, sem_seg_gt = aug_input.image, aug_input.sem_seg
+        else: 
+            boxes = np.asarray([0])
+
+
+        # aug_input = T.StandardAugInput(image, boxes=boxes, sem_seg=sem_seg_gt)
+        # transforms = aug_input.apply_augmentations(self.augmentation)
+        # image, sem_seg_gt = aug_input.image, aug_input.sem_seg
 
         image_shape = image.shape[:2]  # h, w
         # Pytorch's dataloader is efficient on torch.Tensor due to shared-memory,
@@ -137,25 +155,31 @@ class DatasetMapperWithBasis(DatasetMapper):
         dataset_dict["image"] = torch.as_tensor(
             np.ascontiguousarray(image.transpose(2, 0, 1))
         )
+
         if sem_seg_gt is not None:
             dataset_dict["sem_seg"] = torch.as_tensor(sem_seg_gt.astype("long"))
 
+        
+
         # USER: Remove if you don't use pre-computed proposals.
         # Most users would not need this feature.
+
         if self.proposal_topk:
-            utils.transform_proposals(
-                dataset_dict,
-                image_shape,
-                transforms,
-                proposal_topk=self.proposal_topk,
-                min_box_size=self.proposal_min_box_size,
-            )
+            if(int(category) != 5):
+                utils.transform_proposals(
+                    dataset_dict,
+                    image_shape,
+                    transforms,
+                    proposal_topk=self.proposal_topk,
+                    min_box_size=self.proposal_min_box_size,
+                )
 
         if not self.is_train:
-            dataset_dict.pop("annotations", None)
-            dataset_dict.pop("sem_seg_file_name", None)
-            dataset_dict.pop("pano_seg_file_name", None)
-            return dataset_dict
+            if(int(category) != 5):
+                dataset_dict.pop("annotations", None)
+                dataset_dict.pop("sem_seg_file_name", None)
+                dataset_dict.pop("pano_seg_file_name", None)
+                return dataset_dict
 
         if "annotations" in dataset_dict:
             # USER: Modify this if you want to keep them for some reason.
@@ -166,27 +190,59 @@ class DatasetMapperWithBasis(DatasetMapper):
                     anno.pop("keypoints", None)
 
             # USER: Implement additional transformations if you have other types of data
-            annos = [
-                transform_instance_annotations(
-                    obj,
-                    transforms,
-                    image_shape,
-                    keypoint_hflip_indices=self.keypoint_hflip_indices,
-                )
-                for obj in dataset_dict.pop("annotations")
-                if obj.get("iscrowd", 0) == 0
-            ]
-            instances = annotations_to_instances(
-                annos, image_shape, mask_format=self.instance_mask_format
-            )
+            if(int(category) != 5):
+                annos = [
+                    transform_instance_annotations(
+                        obj,
+                        transforms,
+                        image_shape,
+                        keypoint_hflip_indices=self.keypoint_hflip_indices,
+                    )
+                    for obj in dataset_dict.pop("annotations")
+                    if obj.get("iscrowd", 0) == 0
+                ]
+            segment_transform = transf.Compose([myTransform.FreeScaleMask((60, 100)),myTransform.MaskToTensor(),])
+            img_transform = transf.Compose([
+                transf.Resize((288, 800)),
+                transf.ToTensor(),
+                transf.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+            ])
+            if self.is_train:
+                use_ax = True
+            else:
+                use_ax=False
+
+            if(int(category)!=5):
+                # dataset_dict['seg_label'] = torch.zeros([36,100,3])
+                # dataset_dict['cls_label'] = [[-1 for _ in range(4)] for _ in range(18)]
+                instances = annotations_to_instances(
+                annos, image_shape, mask_format=self.instance_mask_format)
+                if self.recompute_boxes:
+                    instances.gt_boxes = instances.gt_masks.get_bounding_boxes()
+                dataset_dict["instances"] = utils.filter_empty_instances(instances)
+
+            else:
+                cl = LaneClsDataset('/home/ghr/hdd/traffic_sign/only_lane/images/CULANE_288',img_path=dataset_dict['file_name'], row_anchor = culane_row_anchor, seg_path=dataset_dict['annotations'][0]['lanefilepath'],segment_transform=segment_transform,use_aux=use_ax)
+                if use_ax:
+                    img,cls,seg = cl.get_item()
+                else:
+                    img,cls = cl.get_item()
+                    seg = 0
+                # print('hahahahahahahahahah')img
+                # import pdb; pdb.set_trace()
+                # dataset_dict["image"] = img
+                dataset_dict['seg_label'] = seg
+                dataset_dict['cls_label'] = cls
+                #instances = annotations_to_instances(dataset_dict['annotations'], image_shape, mask_format=self.instance_mask_format)
+            # Call lane class return label,...
 
             # After transforms such as cropping are applied, the bounding box may no longer
             # tightly bound the object. As an example, imagine a triangle object
             # [(0,0), (2,0), (0,2)] cropped by a box [(1,0),(2,2)] (XYXY format). The tight
             # bounding box of the cropped triangle should be [(1,0),(2,1)], which is not equal to
-            if self.recompute_boxes:
-                instances.gt_boxes = instances.gt_masks.get_bounding_boxes()
-            dataset_dict["instances"] = utils.filter_empty_instances(instances)
+            # if self.recompute_boxes:
+            #     instances.gt_boxes = instances.gt_masks.get_bounding_boxes()
+            # dataset_dict["instances"] = utils.filter_empty_instances(instances)
 
         if self.basis_loss_on and self.is_train:
             # load basis supervisions
@@ -203,9 +259,13 @@ class DatasetMapperWithBasis(DatasetMapper):
                     .replace("train2017", "thing_train")
                 )
             # change extension to npz
+
             basis_sem_path = osp.splitext(basis_sem_path)[0] + ".npz"
             basis_sem_gt = np.load(basis_sem_path)["mask"]
             basis_sem_gt = transforms.apply_segmentation(basis_sem_gt)
             basis_sem_gt = torch.as_tensor(basis_sem_gt.astype("long"))
             dataset_dict["basis_sem"] = basis_sem_gt
+  
+ 
+        
         return dataset_dict

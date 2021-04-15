@@ -42,11 +42,24 @@ class OneStageDetector(ProposalNetwork):
     Uses "instances" as the return key instead of using "proposal".
     """
     def forward(self, batched_inputs):
-        if self.training:
+        if self.training:     
             return super().forward(batched_inputs)
-        processed_results = super().forward(batched_inputs)
-        processed_results = [{"instances": r["proposals"]} for r in processed_results]
-        return processed_results
+        
+
+        processed_results, lane_detection = super().forward(batched_inputs)
+  
+
+
+
+        if(processed_results):
+            lanes = {'lanes':processed_results[0]['lanes']}
+            processed_results = [{"instances": r["proposals"]} for r in processed_results]
+            
+            processed_results.append(lanes)
+
+            return processed_results
+        else:
+            return []
 
 
 def build_top_module(cfg):

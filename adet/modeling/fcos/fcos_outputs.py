@@ -110,7 +110,7 @@ class FCOSOutputs(nn.Module):
 
         loc_to_size_range = torch.cat(loc_to_size_range, dim=0)
         locations = torch.cat(locations, dim=0)
-
+  
         training_targets = self.compute_targets_for_locations(
             locations, gt_instances, loc_to_size_range, num_loc_list
         )
@@ -190,6 +190,8 @@ class FCOSOutputs(nn.Module):
         target_inds = []
         xs, ys = locations[:, 0], locations[:, 1]
 
+    
+
         num_targets = 0
         for im_i in range(len(targets)):
             targets_per_im = targets[im_i]
@@ -262,6 +264,7 @@ class FCOSOutputs(nn.Module):
             dict[loss name -> loss value]: A dict mapping from loss name to loss value.
         """
 
+   
         training_targets = self._get_ground_truth(locations, gt_instances)
 
         # Collect all logits and regression predictions over feature maps
@@ -290,11 +293,12 @@ class FCOSOutputs(nn.Module):
         instances.fpn_levels = cat([
             x.reshape(-1) for x in training_targets["fpn_levels"]
         ], dim=0)
-
+      
         instances.logits_pred = cat([
             # Reshape: (N, C, Hi, Wi) -> (N, Hi, Wi, C) -> (N*Hi*Wi, C)
             x.permute(0, 2, 3, 1).reshape(-1, self.num_classes) for x in logits_pred
         ], dim=0,)
+        
         instances.reg_pred = cat([
             # Reshape: (N, B, Hi, Wi) -> (N, Hi, Wi, B) -> (N*Hi*Wi, B)
             x.permute(0, 2, 3, 1).reshape(-1, 4) for x in reg_pred

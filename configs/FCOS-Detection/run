@@ -1,0 +1,22 @@
+#evaluation
+CUDA_VISIBLE_DEVICES=1 \
+OMP_NUM_THREADS=4 python tools/train_net.py \
+    --config-file configs/FCOS-Detection/MS_R_50_2x.yaml \
+    --eval-only \
+    --num-gpus 1 \
+    OUTPUT_DIR eval_only_traffic_unresized_NO_multiscale/fcos_50 \
+    MODEL.WEIGHTS only_traffic_unresized_NO_multiscale/model_final.pth
+
+#train
+CUDA_VISIBLE_DEVICES=1 \
+OMP_NUM_THREADS=4 python tools/train_net.py \
+    --config-file configs/FCOS-Detection/MS_R_50_2x.yaml \
+    --num-gpus 1 \
+    OUTPUT_DIR only_traffic_NO_multiscale \
+
+#inference
+python demo/demo.py \
+    --config-file configs/FCOS-Detection/MS_R_50_2x.yaml \
+    --input img/00000.jpg \
+    --opts MODEL.WEIGHTS only_lane_nopadding_resume/model_final.pth \
+    

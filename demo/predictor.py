@@ -7,7 +7,7 @@ from collections import deque
 import cv2
 import torch
 import matplotlib.pyplot as plt
-
+from adet.modeling.ultra_fast.get_lines_demo import generate_lines
 from detectron2.data import MetadataCatalog
 from detectron2.engine.defaults import DefaultPredictor
 from detectron2.utils.video_visualizer import VideoVisualizer
@@ -39,7 +39,7 @@ class VisualizationDemo(object):
         else:
             self.predictor = DefaultPredictor(cfg)
 
-    def run_on_image(self, image):
+    def run_on_image(self, image,path):
         """
         Args:
             image (np.ndarray): an image of shape (H, W, C) (in BGR order).
@@ -50,7 +50,17 @@ class VisualizationDemo(object):
             vis_output (VisImage): the visualized image output.
         """
         vis_output = None
+  
+        import time
+        # start = time.time()
         predictions = self.predictor(image)
+        # import pdb;pdb.set_trace()
+        # end = time.time()
+        # f = open('/home/ghr/project/time_unre.txt','a+')
+        # f.write(str(end-start)+'\n')
+        # print('TIme is :',end-start)
+        generate_lines(out=predictions[1]['lanes'],flip_updown=True,localization_type='rel',path=path)
+        predictions = predictions[0]
         # Convert image from OpenCV BGR format to Matplotlib RGB format.
         image = image[:, :, ::-1]
         if self.vis_text:
@@ -72,7 +82,8 @@ class VisualizationDemo(object):
             if "instances" in predictions:
                 instances = predictions["instances"].to(self.cpu_device)
                 vis_output = visualizer.draw_instance_predictions(predictions=instances)
-
+ 
+        
         return predictions, vis_output
 
     def _frame_from_video(self, video):
@@ -114,6 +125,7 @@ class VisualizationDemo(object):
         video_visualizer = VideoVisualizer(self.metadata, self.instance_mode)
 
         def process_predictions(frame, predictions):
+            # import pdb;pdb.set_trace()
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             if "panoptic_seg" in predictions:
                 panoptic_seg, segments_info = predictions["panoptic_seg"]
@@ -145,7 +157,8 @@ class VisualizationDemo(object):
                 if cnt >= buffer_size:
                     frame = frame_data.popleft()
                     predictions = self.predictor.get()
-                    yield process_predictions(frame, predictions)
+                    generate_lines(out=predictions[1]['lanes'],flip_updown=True,localization_type='rel')
+                    yield process_predictions(frame, predictions[0])
 
             while len(frame_data):
                 frame = frame_data.popleft()
@@ -153,7 +166,11 @@ class VisualizationDemo(object):
                 yield process_predictions(frame, predictions)
         else:
             for frame in frame_gen:
-                yield process_predictions(frame, self.predictor(frame))
+                frame = cv2.resize(frame,(800,470))
+                predictions = self.predictor(frame)
+                generate_lines(out=predictions[1]['lanes'],flip_updown=True,localization_type='rel')
+
+                yield process_predictions(frame, predictions[0])
 
 
 class AsyncPredictor:

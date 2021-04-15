@@ -42,6 +42,43 @@ from adet.config import get_cfg
 from adet.checkpoint import AdetCheckpointer
 from adet.evaluation import TextEvaluator
 
+from detectron2.data.datasets import register_coco_instances
+
+register_coco_instances("combine_train", {}, "/home/ghr/hdd/traffic_sign/coco_resized/annotations/instances_train.json", "/home/ghr/hdd/traffic_sign/coco_resized/images/train", extra_keys = ["lanefilepath","lanepoint"])
+register_coco_instances("combine_val", {}, "/home/ghr/hdd/traffic_sign/coco_resized/annotations/instances_val.json", "/home/ghr/hdd/traffic_sign/coco_resized/images/val", extra_keys = ["lanefilepath","lanepoint"])
+
+register_coco_instances("coco_dev_train", {}, "/home/ghr/traffic_sign/coco_test_dev/annotations/image_info_test-dev2017.json", "/home/ghr/traffic_sign/coco_test_dev/test2017")
+register_coco_instances("coco_dev_test", {}, "/home/ghr/traffic_sign/coco_test_dev/annotations/image_info_test-dev2017.json", "/home/ghr/traffic_sign/coco_test_dev/test2017")
+
+register_coco_instances("coco_train_traffic_sign", {}, "/home/ghr/hdd/traffic_sign/coco_resized_traffic/annotations/instances_train.json", "/home/ghr/hdd/traffic_sign/coco_resized_traffic/images/train", extra_keys = ["lanefilepath","lanepoint"])
+register_coco_instances("coco_test_traffic_sign", {}, "/home/ghr/hdd/traffic_sign/coco_resized_traffic/annotations/instances_val.json", "/home/ghr/hdd/traffic_sign/coco_resized_traffic/images/val", extra_keys = ["lanefilepath","lanepoint"])
+
+register_coco_instances("coco_leakage_train", {}, "/home/ghr/hdd/traffic_sign/leakage/annotations/instances_train.json", "/home/ghr/hdd/traffic_sign/leakage/images/train", extra_keys = ["lanefilepath","lanepoint"])
+register_coco_instances("coco_leakage_val", {}, "/home/ghr/hdd/traffic_sign/leakage/annotations/instances_val.json", "/home/ghr/hdd/traffic_sign/leakage/images/val", extra_keys = ["lanefilepath","lanepoint"])
+
+#2021/3/12 resized traffic sign and lane train only
+register_coco_instances("coco_traffic_lane2_train", {}, "/home/ghr/hdd/traffic_sign/coco_traffic_lane2/annotations/instances_train.json", "/home/ghr/hdd/traffic_sign/coco_traffic_lane2/images/train", extra_keys = ["lanefilepath","lanepoint"])
+register_coco_instances("coco_traffic_lane3_test", {}, "/home/ghr/hdd/traffic_sign/coco_traffic_lane3/annotations/instances_val.json", "/home/ghr/hdd/traffic_sign/coco_traffic_lane3/images/val", extra_keys = ["lanefilepath","lanepoint"])
+
+register_coco_instances("coco_traffic_unresized_test", {}, "/home/ghr/hdd/traffic_sign/test_unresized/annotations/instances_val.json", "/home/ghr/hdd/traffic_sign/test_unresized/images/val", extra_keys = ["lanefilepath","lanepoint"])
+
+register_coco_instances("images_with_night", {}, "/home/ghr/hdd/traffic_sign/images_with_night/annotations/instances_train.json", "/home/ghr/hdd/traffic_sign/images_with_night/images/train", extra_keys = ["lanefilepath","lanepoint"])
+
+#2021.03.27 only lane or traffic sign
+register_coco_instances("only_lane", {}, "/home/ghr/hdd/traffic_sign/only_lane/annotations/instances_train.json", "/home/ghr/hdd/traffic_sign/only_lane/images/train", extra_keys = ["lanefilepath","lanepoint"])
+register_coco_instances("only_traffic", {}, "/home/ghr/hdd/traffic_sign/only_traffic/annotations/instances_train.json", "/home/ghr/hdd/traffic_sign/only_traffic/images/train", extra_keys = ["lanefilepath","lanepoint"])
+
+register_coco_instances("only_lane_nopadding", {}, "/home/ghr/hdd/traffic_sign/only_lane/annotations/instances_train.json", "/home/ghr/hdd/traffic_sign/only_lane/images/CULANE_288", extra_keys = ["lanefilepath","lanepoint"])
+register_coco_instances("traffic_unresized_train", {}, "/home/ghr/hdd/traffic_sign/only_traffic_unresized/annotations/instances_train.json", "/home/ghr/hdd/traffic_sign/only_traffic_unresized/images/train", extra_keys = ["lanefilepath","lanepoint"])
+
+from detectron2.data import MetadataCatalog
+#MetadataCatalog.get("coco_dev_test")
+MetadataCatalog.get("coco_traffic_lane2_train").thing_classes = ['background', 'danger', 'prohibitory', 'mandatory', 'other','5']
+MetadataCatalog.get("coco_traffic_lane3_test").thing_classes = ['background','danger', 'prohibitory', 'mandatory', 'other','5']
+MetadataCatalog.get("coco_traffic_unresized_test").thing_classes = ['background','danger', 'prohibitory', 'mandatory', 'other','5']
+MetadataCatalog.get("traffic_unresized_train").thing_classes = ['background', 'danger', 'prohibitory', 'mandatory', 'other','5']
+#MetadataCatalog.get("coco_test_traffic_sign").thing_classes = ['background','danger', 'prohibitory', 'mandatory', 'other','5']
+MetadataCatalog.get("only_lane_nopadding").thing_classes = ['background','danger', 'prohibitory', 'mandatory', 'other','5']
 
 class Trainer(DefaultTrainer):
     """
@@ -99,6 +136,7 @@ class Trainer(DefaultTrainer):
         It calls :func:`detectron2.data.build_detection_train_loader` with a customized
         DatasetMapper, which adds categorical labels as a semantic mask.
         """
+        
         mapper = DatasetMapperWithBasis(cfg, True)
         return build_detection_train_loader(cfg, mapper=mapper)
 
@@ -140,6 +178,7 @@ class Trainer(DefaultTrainer):
                     dataset_name, evaluator_type
                 )
             )
+
         if len(evaluator_list) == 1:
             return evaluator_list[0]
         return DatasetEvaluators(evaluator_list)
@@ -181,8 +220,13 @@ def setup(args):
 def main(args):
     cfg = setup(args)
 
+    from thop import profile    
+
     if args.eval_only:
         model = Trainer.build_model(cfg)
+        #input_size = (1, 3, 288, 800)
+        #input_size = torch.zeros(*input_size)
+        #flops, params = profile(model, inputs=(input_size, ))    
         AdetCheckpointer(model, save_dir=cfg.OUTPUT_DIR).resume_or_load(
             cfg.MODEL.WEIGHTS, resume=args.resume
         )

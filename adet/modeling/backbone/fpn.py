@@ -85,4 +85,6 @@ def build_fcos_resnet_fpn_backbone(cfg, input_shape: ShapeSpec):
         top_block=top_block,
         fuse_type=cfg.MODEL.FPN.FUSE_TYPE,
     )
+
+
     return backbone

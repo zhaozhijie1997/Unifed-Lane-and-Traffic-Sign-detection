@@ -52,7 +52,7 @@ def get_parser():
     parser.add_argument(
         "--confidence-threshold",
         type=float,
-        default=0.85,
+        default=0.8,
         help="Minimum score for instance predictions to be shown",
     )
     parser.add_argument(
@@ -75,50 +75,56 @@ if __name__ == "__main__":
     demo = VisualizationDemo(cfg)
 
     if args.input:
-        if os.path.isdir(args.input[0]):
-            args.input = [os.path.join(args.input[0], fname) for fname in os.listdir(args.input[0])]
-        elif len(args.input) == 1:
-            args.input = glob.glob(os.path.expanduser(args.input[0]))
-            assert args.input, "The input path(s) was not found"
-        for path in tqdm.tqdm(args.input, disable=not args.output):
-            # use PIL, to be consistent with evaluation
-            img = read_image(path, format="BGR")
-            # import pdb;pdb.set_trace()
-            start_time = time.time()
-            predictions, visualized_output = demo.run_on_image(img,path)
-            logger.info(
-                "{}: detected {} instances in {:.2f}s".format(
-                    path, len(predictions["instances"]), time.time() - start_time
-                )
-            )
+        # if os.path.isdir(args.input[0]):
+        #     args.input = [os.path.join(args.input[0], fname) for fname in os.listdir(args.input[0])]
+        # elif len(args.input) == 1:
+        #     args.input = glob.glob(os.path.expanduser(args.input[0]))
+        #     assert args.input, "The input path(s) was not found"
+        # # for path in tqdm.tqdm(args.input, disable=not args.output):
+        #     # use PIL, to be consistent with evaluation
+        # import pdb;pdb.set_trace()
+        print(args.input[0])
+        for folder in os.listdir(args.input[0]):
+            for img_path in os.listdir(args.input[0]+'/'+folder):
+                if img_path.endswith('.jpg'):
+                    path = args.input[0]+'/'+folder + '/'+ img_path
+                    img = read_image(path, format="BGR")
+                    # import pdb;pdb.set_trace()
+                    # print(path)
+                    # start_time = time.time()
+                    predictions, visualized_output = demo.run_on_image(img,path)
+                    # logger.info(
+                    #     "{}: detected {} instances in {:.2f}s".format(
+                    #         path, len(predictions["instances"]), time.time() - start_time
+                    #     )
+                    # )
 
-            if args.output:
-                if os.path.isdir(args.output):
-                    assert os.path.isdir(args.output), args.output
-                    out_filename = os.path.join(args.output, os.path.basename(path))
-                else:
-                    assert len(args.input) == 1, "Please specify a directory with args.output"
-                    out_filename = args.output
-                visualized_output.save(out_filename)
-            else:
-                p = path.split('/')[-1]
-                file = open('test/'+'test0408.lines.txt')
-                lanes = file.readlines()
-                img = visualized_output.get_image()[:, :, ::-1]
-                for lane in range(len(lanes)):
-                    
-                    line = lanes[lane].strip().split(' ')
-                    if len(line)>=2:
-                        x = np.asarray(line[::2])
-                        y = (np.asarray(line[1::2]))
-                        x = [int(a) for a in x]
-                        y = [int(b) for b in y]
-                        for i,j in zip(x,y):
-                            img = cv2.circle(img, (i,j), radius=1, color=(0, 255, 0), thickness=2)
-                # cv2.imshow(WINDOW_NAME, img)
-                cv2.imwrite('test_res/'+p[:-3]+'_result.jpg',img)
-                # if cv2.waitKey(0) == 27:
-                #     break  # esc to quit
+                    if args.output:
+                        if os.path.isdir(args.output):
+                            assert os.path.isdir(args.output), args.output
+                            out_filename = os.path.join(args.output, os.path.basename(path))
+                        else:
+                            assert len(args.input) == 1, "Please specify a directory with args.output"
+                            out_filename = args.output
+                        visualized_output.save(out_filename)
+                # else:
+                #     file = open('/home/ghr/test/00000.lines.txt')
+                #     lanes = file.readlines()
+                #     img = visualized_output.get_image()[:, :, ::-1]
+                #     for lane in range(len(lanes)):
+                        
+                #         line = lanes[lane].strip().split(' ')
+                #         if len(line)>=2:
+                #             x = np.asarray(line[::2])
+                #             y = (np.asarray(line[1::2]))
+                #             x = [int(a) for a in x]
+                #             y = [int(b) for b in y]
+                #             for i,j in zip(x,y):
+                #                 img = cv2.circle(img, (i,j), radius=2, color=(0, 255, 0), thickness=2)
+                #     cv2.imshow(WINDOW_NAME, img)
+                #     cv2.imwrite('test/test_img.jpg',img)
+                #     if cv2.waitKey(0) == 27:
+                #         break  # esc to quit
     elif args.webcam:
         assert args.input is None, "Cannot have both --input and --webcam!"
         cam = cv2.VideoCapture(0)

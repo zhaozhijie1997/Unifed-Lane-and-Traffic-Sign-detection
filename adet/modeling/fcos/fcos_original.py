@@ -3,16 +3,15 @@ from typing import List, Dict
 import torch
 from torch import nn
 from torch.nn import functional as F
-from .lane_detection import parsingNet
+
 from detectron2.layers import ShapeSpec, NaiveSyncBatchNorm
 from detectron2.modeling.proposal_generator.build import PROPOSAL_GENERATOR_REGISTRY
-import numpy as np
+
 from adet.layers import DFConv2d, NaiveGroupNorm
 from adet.utils.comm import compute_locations
 from .fcos_outputs import FCOSOutputs
-from ..ultra_fast.factory import get_loss_dict
-from ..ultra_fast.cal_loss import inference,calc_loss
-#import pdb
+
+
 __all__ = ["FCOS"]
 
 INF = 100000000
@@ -47,30 +46,22 @@ class FCOS(nn.Module):
     """
     def __init__(self, cfg, input_shape: Dict[str, ShapeSpec]):
         super().__init__()
-      
         self.in_features = cfg.MODEL.FCOS.IN_FEATURES
         self.fpn_strides = cfg.MODEL.FCOS.FPN_STRIDES
         self.yield_proposal = cfg.MODEL.FCOS.YIELD_PROPOSAL
 
         self.fcos_head = FCOSHead(cfg, [input_shape[f] for f in self.in_features])
-      
-        # if self.training:
-        self.lane_head = parsingNet().cuda()
-        # else:
-            
-        #     self.lane_head = parsingNet(use_aux=False).cuda()
-
         self.in_channels_to_top_module = self.fcos_head.in_channels_to_top_module
+
         self.fcos_outputs = FCOSOutputs(cfg)
 
-  
     def forward_head(self, features, top_module=None):
         features = [features[f] for f in self.in_features]
         pred_class_logits, pred_deltas, pred_centerness, top_feats, bbox_towers = self.fcos_head(
             features, top_module, self.yield_proposal)
         return pred_class_logits, pred_deltas, pred_centerness, top_feats, bbox_towers
 
-    def forward(self, images, features, gt_instances=None, top_module=None, lane_detection = False, use_ax=True,gt_segmentation = [], idx = [], ori = None):
+    def forward(self, images, features, gt_instances=None, top_module=None):
         """
         Arguments:
             images (list[Tensor] or ImageList): images to be processed
@@ -83,112 +74,40 @@ class FCOS(nn.Module):
                 like `scores`, `labels` and `mask` (for Mask R-CNN models).
 
         """
-    
-        #import pdb
-    
-    
         features = [features[f] for f in self.in_features]
+  
+        
+        locations = self.compute_locations(features)
+        logits_pred, reg_pred, ctrness_pred, top_feats, bbox_towers = self.fcos_head(
+            features, top_module, self.yield_proposal
+        )
 
-        features_tmp = []
-
-
+        results = {}
+        if self.yield_proposal:
+            results["features"] = {
+                f: b for f, b in zip(self.in_features, bbox_towers)
+            }
 
         if self.training:
-
-            for j in range(0, len(features)):
-                # for i in idx:
-                extra = features[j][idx,:,:]
-                #extra = torch.tensor(extra)
-                features_tmp.append(extra)
-        else:
-            features_tmp = features
-        
-        #print("lane detection", lane_detection)
-        #print("size of features", features_tmp[0].size())
-        #cls_loss = 0
-
-        if lane_detection or not self.training:
-        #if lane_detection:
-            #if(features_tmp[0][0].size() != torch.Size([256,60,100])):
-                #return 0
-            
-            if self.training:
-
-               
-                # lane_net = parsingNet(in_model = features_tmp,use_aux=use_ax).cuda()
-                cls_loss,seg_loss = self.lane_head.forward(features = features_tmp,aux=True)
-
-            
-
-                loss_dict = get_loss_dict(use_ax)#need to set up and pass config file, currelenntly using simplified version
-                #lane_loss_to = 0.0
-                
-                # import pdb; pdb.set_trace()
-            
-                gt_instances = torch.stack(gt_instances).cuda()
-                # print('hahahahahahahahahah')
-                gt_segmentation = torch.stack(gt_segmentation).cuda()
-                # for no in range(len(gt_instances)): 
-                # results = inference(gt_instances[no],gt_segmentation[no],use_ax,cls_out=cls_loss[no],seg_out=seg_loss[no])
-                results = inference(gt_instances,gt_segmentation,use_ax,cls_out=cls_loss,seg_out=seg_loss)
-
-                # pdb.set_trace()
-                lane_loss = calc_loss(loss_dict,results=results)
-                #lane_loss_to+=lane_loss
-
-                # return lane_loss_to/len(gt_instances)
-                
-                
-
-                return lane_loss
-
-            #cls_loss = parsingNet(features = features_tmp,use_aux=False).cuda()
-            # self.lane_head = parsingNet(use_aux=False).cuda()
-            cls_loss = self.lane_head.forward(features=features_tmp,aux=False)
-  
-
-            
-        if not lane_detection or not self.training:   
-            
-            
-            locations = self.compute_locations(features_tmp)
-            logits_pred, reg_pred, ctrness_pred, top_feats, bbox_towers = self.fcos_head(
-                features_tmp, top_module, self.yield_proposal
+            results, losses = self.fcos_outputs.losses(
+                logits_pred, reg_pred, ctrness_pred,
+                locations, gt_instances, top_feats
             )
-
-      
-   
-            results = {}
-            if self.yield_proposal:
-                results["features"] = {
-                    f: b for f, b in zip(self.in_features, bbox_towers)
-                }
-
-            if self.training:
-                results, losses = self.fcos_outputs.losses(
-                    logits_pred, reg_pred, ctrness_pred,
-                    locations, gt_instances, top_feats
-                )
-                
-                if self.yield_proposal:
-                    with torch.no_grad():
-                        results["proposals"] = self.fcos_outputs.predict_proposals(
-                            logits_pred, reg_pred, ctrness_pred,
-                            locations, images.image_sizes, top_feats
-                        )
-                # losses['lane_loss'] = lane_loss
-
-                return results, losses
             
+            if self.yield_proposal:
+                with torch.no_grad():
+                    results["proposals"] = self.fcos_outputs.predict_proposals(
+                        logits_pred, reg_pred, ctrness_pred,
+                        locations, images.image_sizes, top_feats
+                    )
+            return results, losses
+        else:
             results = self.fcos_outputs.predict_proposals(
                 logits_pred, reg_pred, ctrness_pred,
                 locations, images.image_sizes, top_feats
             )
 
- 
-    
-
-            return results, cls_loss
+            return results, {}
 
     def compute_locations(self, features):
         locations = []
@@ -312,5 +231,4 @@ class FCOSHead(nn.Module):
             bbox_reg.append(F.relu(reg))
             if top_module is not None:
                 top_feats.append(top_module(bbox_tower))
-
         return logits, bbox_reg, ctrness, top_feats, bbox_towers

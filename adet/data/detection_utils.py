@@ -50,7 +50,11 @@ def transform_beziers_annotations(beziers, transforms):
 
 
 def annotations_to_instances(annos, image_size, mask_format="polygon"):
+
+    #import pdb
+   
     instance = d2_anno_to_inst(annos, image_size, mask_format)
+  
 
     if not annos:
         return instance
@@ -95,6 +99,8 @@ def build_augmentation(cfg, is_train):
         if cfg.INPUT.HFLIP_TRAIN:
             augmentation.append(T.RandomFlip())
         logger.info("Augmentations used in training: " + str(augmentation))
+    
+
     return augmentation
 
 
