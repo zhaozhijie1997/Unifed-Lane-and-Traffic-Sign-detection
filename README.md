@@ -8,7 +8,7 @@ The project began in August 2020, start of the Semester one of Year 4.
 
 This project aims for developing a *high performance* and *light-weight* model with lane detection and traffic sign detection features.
 
-The combined model was built on **AdelaiDet** which is on top of **Detectron2** and modified Ultra-fast architecture to be fitted into FCOS model. 
+The combined model was built on [**AdelaiDet** ](https://github.com/aim-uofa/AdelaiDet) which is on top of[ **Detectron2**](https://github.com/facebookresearch/detectron2) and modified Ultra-fast architecture to be fitted into FCOS model. 
 
 ## Acknowledgements
 
@@ -16,7 +16,7 @@ We would like to thank the following people who have helped and guided us throug
 
 First of all, we want to express our deepest gratitude to our final year project supervisor Assistant Professor Feng Jiashi for his patient listening, supportive mentoring and inspiring guidance. Prof. Feng has kindly arranged weekly meetings for us to update the project progress, during which he always provided timely feedback and pointed out new research directions. We cannot finish this project without his support.
 
-We want to thank Dr. Liew Jun Hao, who has given us a lot of suggestions as well as encouragement whenever we had doubts or difficulties in our project. We also want to thank our year project examiner Associate Professor Robby Tan, who has listened to our CA1 presentation and given advice on how we could improve.
+We want to thank Dr. Liew Jun Hao, who has given us a lot of suggestions as well as encouragement whenever we had doubts or difficulties in our project. We also want to thank our final year project examiner Associate Professor Robby Tan, who has listened to our CA1 presentation and given advice on how we could improve.
 
 It was our great honour to join the big family of Learning & Vision lab led by Prof. Feng, where all the lab-mates are extremely helpful, and they have given me lots of support.
 
