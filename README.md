@@ -1,4 +1,84 @@
-# AdelaiDet
+# NUS AY20/21 EE4002D Final Year Project: Real-time Detection of Interest Regions in Multiple Weather and Lighting Conditions
+
+## Abstract
+
+This is a final year project done by four final year student in NUS: Ai Zhengwei, Guo Haoren, Huang Lixing and Zhao Zhijie.
+
+The project began in August 2020, start of the Semester one of Year 4.
+
+This project aims for developing a *high performance* and *light-weight* model with lane detection and traffic sign detection features.
+
+The combined model was built on **AdelaiDet** which is on top of **Detectron2** and modified Ultra-fast architecture to be fitted into FCOS model. 
+
+## Acknowledgements
+
+We would like to thank the following people who have helped and guided us through the course of my final year project.
+
+First of all, we want to express our deepest gratitude to our final year project supervisor Assistant Professor Feng Jiashi for his patient listening, supportive mentoring and inspiring guidance. Prof. Feng has kindly arranged weekly meetings for us to update the project progress, during which he always provided timely feedback and pointed out new research directions. We cannot finish this project without his support.
+
+We want to thank Dr. Liew Jun Hao, who has given us a lot of suggestions as well as encouragement whenever we had doubts or difficulties in our project. We also want to thank our year project examiner Associate Professor Robby Tan, who has listened to our CA1 presentation and given advice on how we could improve.
+
+It was our great honour to join the big family of Learning & Vision lab led by Prof. Feng, where all the lab-mates are extremely helpful, and they have given me lots of support.
+
+## Contributions
+
+The main contribution of this project can be summarized as follows:
+
+* A combined model that can perform traffic sign detection and lane detection at the same time with good accuracy and efficiency.
+
+* We show how to train a **unified model** on two disjoint datasets (i.e. lane detection dataset without traffic sign annotations and vice versa).
+
+* **CoordConv** which incorporates positional information to optimize the based model.
+
+* Apply FCOS model to traffic sign detection branch to improve the efficiency of traffic sign detection but keep similar average precision.
+
+* Ultra-Fast model to lane detection branch and apply **Cycle Gan** to enhance the performance for night image detection.
+
+* CycleGAN to synthesize realistic night-time images to augment the existing dataset, encouraging the model to perform better even on nighttime.
+
+  
+
+## Combined Model Architecture
+
+![image-20210415131623457](/demo/combine_model_architecture.png)
+
+## Results and Model Comparison
+### Traffic Sign Detection Results Comparison
+| Model      |    AP    |   AP50   |   FPS  |                       
+| ---------- | :------: | :------: | :----: |
+| FCOS R50 | 62.414 | 82.264| 25 |
+| FCOS R50 RT | 75.465 | 89.754| 10 |
+| Combined Model| 66.732 | 86.063 |21.27|
+| Combined Model(Added Coord Conv)| 65.505 | 84.297 |20|
+
+### Lane Detection Results Comparison
+|            |Original Ultra-Fast Model|New Combined Model|New Combined Model (no padding loss)|
+| ---------- | :---------------------: | :--------------: | :--------------------------------: |
+| Normal | 0.8862|0.8821|0.9|
+| Crowd |0.7079|0.7866|0.8039|
+| Night |0.6664|0.6304|0.6289|
+| Noline|0.4274|0.5744|0.5873|
+| Shadow|0.5987|0.7967|0.7434|
+| Arrow|0.7948|0.8589|0.8683|
+|Hilight|0.6091|0.7356|0.7334|
+|Curve|0.6697|0.6483|0.6591|
+|Total|0.7135|0.7529|0.7644|
+
+
+## Demo
+### Demo Images
+
+The following are the results we got from the combined model:
+
+![image-20210415131726604](/demo/demo1.png)
+
+![image-20210415131742355](/demo/demo2.png)
+
+### Demo Video
+* [Demo Video 1](https://www.youtube.com/watch?v=JZg8QlqiTq4)
+* [Demo Video 2](https://www.youtube.com/watch?v=TsPYx1J9Bn8)
+
+# AdelaiDet 
 
 AdelaiDet is an open source toolbox for multiple instance-level recognition tasks on top of [Detectron2](https://github.com/facebookresearch/detectron2).
 All instance-level recognition works from our group are open-sourced here.
@@ -19,55 +99,58 @@ To date, AdelaiDet implements the following algorithms:
 
 
 ## Models
+
 ### COCO Object Detecton Baselines with [FCOS](https://arxiv.org/abs/1904.01355)
-Name | inf. time | box AP | download
---- |:---:|:---:|:---
-[FCOS_R_50_1x](configs/FCOS-Detection/R_50_1x.yaml) | 16 FPS | 38.7 | [model](https://cloudstor.aarnet.edu.au/plus/s/glqFc13cCoEyHYy/download)
-[FCOS_MS_R_101_2x](configs/FCOS-Detection/MS_R_101_2x.yaml) | 12 FPS | 43.1 | [model](https://cloudstor.aarnet.edu.au/plus/s/M3UOT6JcyHy2QW1/download)
-[FCOS_MS_X_101_32x8d_2x](configs/FCOS-Detection/MS_X_101_32x8d_2x.yaml) | 6.6 FPS | 43.9 | [model](https://cloudstor.aarnet.edu.au/plus/s/R7H00WeWKZG45pP/download)
-[FCOS_MS_X_101_32x8d_dcnv2_2x](configs/FCOS-Detection/MS_X_101_32x8d_2x_dcnv2.yaml) | 4.6 FPS | 46.6 | [model](https://cloudstor.aarnet.edu.au/plus/s/TDsnYK8OXDTrafF/download)
-[FCOS_RT_MS_DLA_34_4x_shtw](configs/FCOS-Detection/FCOS_RT/MS_DLA_34_4x_syncbn_shared_towers.yaml) | 52 FPS | 39.1 | [model](https://cloudstor.aarnet.edu.au/plus/s/4vc3XwQezyhNvnB/download)
+
+| Name                                                         | inf. time | box AP | download                                                     |
+| ------------------------------------------------------------ | :-------: | :----: | :----------------------------------------------------------- |
+| [FCOS_R_50_1x](configs/FCOS-Detection/R_50_1x.yaml)          |  16 FPS   |  38.7  | [model](https://cloudstor.aarnet.edu.au/plus/s/glqFc13cCoEyHYy/download) |
+| [FCOS_MS_R_101_2x](configs/FCOS-Detection/MS_R_101_2x.yaml)  |  12 FPS   |  43.1  | [model](https://cloudstor.aarnet.edu.au/plus/s/M3UOT6JcyHy2QW1/download) |
+| [FCOS_MS_X_101_32x8d_2x](configs/FCOS-Detection/MS_X_101_32x8d_2x.yaml) |  6.6 FPS  |  43.9  | [model](https://cloudstor.aarnet.edu.au/plus/s/R7H00WeWKZG45pP/download) |
+| [FCOS_MS_X_101_32x8d_dcnv2_2x](configs/FCOS-Detection/MS_X_101_32x8d_2x_dcnv2.yaml) |  4.6 FPS  |  46.6  | [model](https://cloudstor.aarnet.edu.au/plus/s/TDsnYK8OXDTrafF/download) |
+| [FCOS_RT_MS_DLA_34_4x_shtw](configs/FCOS-Detection/FCOS_RT/MS_DLA_34_4x_syncbn_shared_towers.yaml) |  52 FPS   |  39.1  | [model](https://cloudstor.aarnet.edu.au/plus/s/4vc3XwQezyhNvnB/download) |
 
 More models can be found in FCOS [README.md](configs/FCOS-Detection/README.md).
 
 ### COCO Instance Segmentation Baselines with [BlendMask](https://arxiv.org/abs/2001.00309)
 
-Model | Name |inf. time | box AP | mask AP | download
---- |:---:|:---:|:---:|:---:|:---:
-Mask R-CNN | [R_101_3x](https://github.com/facebookresearch/detectron2/blob/master/configs/COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml) | 10 FPS | 42.9 | 38.6 |
-BlendMask | [R_101_3x](configs/BlendMask/R_101_3x.yaml) | 11 FPS | 44.8 | 39.5 | [model](https://cloudstor.aarnet.edu.au/plus/s/e4fXrliAcMtyEBy/download)
-BlendMask | [R_101_dcni3_5x](configs/BlendMask/R_101_dcni3_5x.yaml) | 10 FPS | 46.8 | 41.1 | [model](https://cloudstor.aarnet.edu.au/plus/s/vbnKnQtaGlw8TKv/download)
+| Model      |                             Name                             | inf. time | box AP | mask AP |                           download                           |
+| ---------- | :----------------------------------------------------------: | :-------: | :----: | :-----: | :----------------------------------------------------------: |
+| Mask R-CNN | [R_101_3x](https://github.com/facebookresearch/detectron2/blob/master/configs/COCO-InstanceSegmentation/mask_rcnn_R_101_FPN_3x.yaml) |  10 FPS   |  42.9  |  38.6   |                                                              |
+| BlendMask  |         [R_101_3x](configs/BlendMask/R_101_3x.yaml)          |  11 FPS   |  44.8  |  39.5   | [model](https://cloudstor.aarnet.edu.au/plus/s/e4fXrliAcMtyEBy/download) |
+| BlendMask  |   [R_101_dcni3_5x](configs/BlendMask/R_101_dcni3_5x.yaml)    |  10 FPS   |  46.8  |  41.1   | [model](https://cloudstor.aarnet.edu.au/plus/s/vbnKnQtaGlw8TKv/download) |
 
 For more models and information, please refer to BlendMask [README.md](configs/BlendMask/README.md).
 
 ### COCO Instance Segmentation Baselines with [MEInst](https://arxiv.org/abs/2003.11712)
 
-Name | inf. time | box AP | mask AP | download
---- |:---:|:---:|:---:|:---:
-[MEInst_R_50_3x](https://github.com/aim-uofa/AdelaiDet/configs/MEInst-InstanceSegmentation/MEInst_R_50_3x.yaml) | 12 FPS | 43.6 | 34.5 | [model](https://cloudstor.aarnet.edu.au/plus/s/1ID0DeuI9JsFQoG/download)
+| Name                                                         | inf. time | box AP | mask AP |                           download                           |
+| ------------------------------------------------------------ | :-------: | :----: | :-----: | :----------------------------------------------------------: |
+| [MEInst_R_50_3x](https://github.com/aim-uofa/AdelaiDet/configs/MEInst-InstanceSegmentation/MEInst_R_50_3x.yaml) |  12 FPS   |  43.6  |  34.5   | [model](https://cloudstor.aarnet.edu.au/plus/s/1ID0DeuI9JsFQoG/download) |
 
 For more models and information, please refer to MEInst [README.md](configs/MEInst-InstanceSegmentation/README.md).
 
 ### Total_Text results with [ABCNet](https://arxiv.org/abs/2002.10200)
 
-Name | inf. time | e2e-hmean | det-hmean | download
----  |:---------:|:---------:|:---------:|:---:
-[attn_R_50](configs/BAText/TotalText/attn_R_50.yaml) | 11 FPS | 67.1 | 86.0 | [model](https://cloudstor.aarnet.edu.au/plus/s/t2EFYGxNpKPUqhc/download)
+| Name                                                 | inf. time | e2e-hmean | det-hmean |                           download                           |
+| ---------------------------------------------------- | :-------: | :-------: | :-------: | :----------------------------------------------------------: |
+| [attn_R_50](configs/BAText/TotalText/attn_R_50.yaml) |  11 FPS   |   67.1    |   86.0    | [model](https://cloudstor.aarnet.edu.au/plus/s/t2EFYGxNpKPUqhc/download) |
 
 For more models and information, please refer to ABCNet [README.md](configs/BAText/README.md).
 
 ### COCO Instance Segmentation Baselines with [CondInst](https://arxiv.org/abs/2003.05664)
 
-Name | inf. time | box AP | mask AP | download
---- |:---:|:---:|:---:|:---:
-[CondInst_MS_R_50_1x](configs/CondInst/MS_R_50_1x.yaml) | 14 FPS | 39.7 | 35.7 | [model](https://cloudstor.aarnet.edu.au/plus/s/Trx1r4tLJja7sLT/download)
-[CondInst_MS_R_50_BiFPN_3x_sem](configs/CondInst/MS_R_50_BiFPN_3x_sem.yaml) | 13 FPS | 44.7 | 39.4 | [model](https://cloudstor.aarnet.edu.au/plus/s/9cAHjZtdaAGnb2Q/download)
-[CondInst_MS_R_101_3x](configs/CondInst/MS_R_101_3x.yaml) | 11 FPS | 43.3 | 38.6 | [model](https://cloudstor.aarnet.edu.au/plus/s/vWLiYm8OnrTSUD2/download)
-[CondInst_MS_R_101_BiFPN_3x_sem](configs/CondInst/MS_R_101_BiFPN_3x_sem.yaml) | 10 FPS | 45.7 | 40.2 | [model](https://cloudstor.aarnet.edu.au/plus/s/2p1ashxl54Su8vv/download)
+| Name                                                         | inf. time | box AP | mask AP |                           download                           |
+| ------------------------------------------------------------ | :-------: | :----: | :-----: | :----------------------------------------------------------: |
+| [CondInst_MS_R_50_1x](configs/CondInst/MS_R_50_1x.yaml)      |  14 FPS   |  39.7  |  35.7   | [model](https://cloudstor.aarnet.edu.au/plus/s/Trx1r4tLJja7sLT/download) |
+| [CondInst_MS_R_50_BiFPN_3x_sem](configs/CondInst/MS_R_50_BiFPN_3x_sem.yaml) |  13 FPS   |  44.7  |  39.4   | [model](https://cloudstor.aarnet.edu.au/plus/s/9cAHjZtdaAGnb2Q/download) |
+| [CondInst_MS_R_101_3x](configs/CondInst/MS_R_101_3x.yaml)    |  11 FPS   |  43.3  |  38.6   | [model](https://cloudstor.aarnet.edu.au/plus/s/vWLiYm8OnrTSUD2/download) |
+| [CondInst_MS_R_101_BiFPN_3x_sem](configs/CondInst/MS_R_101_BiFPN_3x_sem.yaml) |  10 FPS   |  45.7  |  40.2   | [model](https://cloudstor.aarnet.edu.au/plus/s/2p1ashxl54Su8vv/download) |
 
 For more models and information, please refer to CondInst [README.md](configs/CondInst/README.md).
 
 Note that:
+
 - Inference time for all projects is measured on a NVIDIA 1080Ti with batch size 1.
 - APs are evaluated on COCO2017 val split unless specified.
 
@@ -101,6 +184,7 @@ Some projects may require special setup, please follow their own `README.md` in 
 1. Pick a model and its config file, for example, `fcos_R_50_1x.yaml`.
 2. Download the model `wget https://cloudstor.aarnet.edu.au/plus/s/glqFc13cCoEyHYy/download -O fcos_R_50_1x.pth`
 3. Run the demo with
+
 ```
 python demo/demo.py \
     --config-file configs/FCOS-Detection/R_50_1x.yaml \
@@ -121,6 +205,7 @@ OMP_NUM_THREADS=1 python tools/train_net.py \
     --num-gpus 8 \
     OUTPUT_DIR training_dir/fcos_R_50_1x
 ```
+
 To evaluate the model after training, run:
 
 ```
@@ -131,7 +216,9 @@ OMP_NUM_THREADS=1 python tools/train_net.py \
     OUTPUT_DIR training_dir/fcos_R_50_1x \
     MODEL.WEIGHTS training_dir/fcos_R_50_1x/model_final.pth
 ```
+
 Note that:
+
 - The configs are made for 8-GPU training. To train on another number of GPUs, change the `--num-gpus`.
 - If you want to measure the inference time, please change `--num-gpus` to 1.
 - We set `OMP_NUM_THREADS=1` by default, which achieves the best speed on our machines, please change it as needed.
@@ -148,7 +235,6 @@ Nvidia, Huawei Noah's Ark Lab, ByteDance, Adobe who generously donated GPU compu
 If you use this toolbox in your research or wish to refer to the baseline results published here, please use the following BibTeX entries:
 
 ```BibTeX
-
 @misc{tian2019adelaidet,
   author =       {Tian, Zhi and Chen, Hao and Wang, Xinlong and Liu, Yuliang and Shen, Chunhua},
   title =        {{AdelaiDet}: A Toolbox for Instance-level Recognition Tasks},
